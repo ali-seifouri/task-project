@@ -4,6 +4,8 @@ import pymongo
 import uvicorn
 from fastapi import FastAPI
 from pymongo import MongoClient
+from fastapi.requests import Request
+from fastapi.responses import Response
 
 from app import tasks_router
 
@@ -23,6 +25,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(tasks_router.router)
+
+
+@app.middleware("http")
+async def errors_handling(request: Request, call_next):
+    """
+    middleware to handle exceptions
+    """
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        return Response(status_code=500, content={'reason': str(exc)})
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=5050, reload=True)

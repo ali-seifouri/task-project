@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, HTTPException
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from pymongo.errors import DuplicateKeyError
@@ -58,7 +58,7 @@ async def add_task_data(
     try:
         TaskModel.model_validate(task)
     except ValidationError as exc:
-        return Response(content='validation error', status_code=status.HTTP_400_BAD_REQUEST)
+        raise HTTPException(detail='validation error', status_code=status.HTTP_400_BAD_REQUEST)
 
     from main import task_collection
     # noinspection PyGlobalUndefined
@@ -69,9 +69,9 @@ async def add_task_data(
         new_task = task_collection.find_one({"_id": t.inserted_id}, {'_id': False})
         return new_task
     except DuplicateKeyError as dke:
-        return dke.details.get("errmsg", "duplicate id")
+        raise HTTPException(detail=dke.details.get("errmsg", "duplicate id"), status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as ex:
-        return ex.message
+        return HTTPException(detail=ex.message, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @router.put("/{id}", description="Updates a task")
@@ -85,9 +85,22 @@ async def update_task_data(id: int, req=Body(...)):
     task = task_collection.find_one({"id": id})
     if task:
         updated_task = task_collection.update_one({"id": id}, {"$set": data})
-    if updated_task:
-        return Response(content=f"Task with ID: {id} update is successful")
-    return Response(
-        content="task not found",
-        status_code=status.HTTP_404_NOT_FOUND
-    )
+        if updated_task:
+            return Response(content=f"Task with ID: {id} update is successful")
+        else:
+            raise HTTPException(detail=f"Task with ID: {id} update is unsuccessful", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    raise HTTPException(detail="task not found", status_code=status.HTTP_404_NOT_FOUND)
+
+
+@router.delete("/{id}")
+async def delete_task_data(id: int):
+    from main import task_collection
+    # noinspection PyGlobalUndefined
+    global task_collection
+
+    task_to_delete = task_collection.find_one({"id": id})
+    if task_to_delete:
+        task_collection.delete_one({"id": id})
+        return Response(f"Task with ID: {id} removed")
+    else:
+        raise HTTPException(detail="task not found", status_code=status.HTTP_404_NOT_FOUND)
