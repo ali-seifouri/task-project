@@ -1,11 +1,11 @@
 from contextlib import asynccontextmanager
 
-import pymongo
 import uvicorn
 from fastapi import FastAPI
-from pymongo import MongoClient
 from fastapi.requests import Request
-from fastapi.responses import Response
+
+from pymongo import MongoClient
+from starlette.responses import JSONResponse
 
 from app import tasks_router
 from app.config import get_settings
@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     task_collection = db[settings.mongo_collection_name]
     # if we want to add a custom id column with unique index we should add the line below (if we dont want to use the
     # ObjectID as the main id in business)
-    task_collection.create_index([("id", pymongo.ASCENDING)], unique=True)
+    # task_collection.create_index([("id", pymongo.ASCENDING)], unique=True)
     yield
 
 
@@ -40,7 +40,7 @@ async def errors_handling(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as exc:
-        return Response(status_code=500, content={'reason': str(exc)})
+        return JSONResponse(status_code=500, content={'reason': str(exc)})
 
 
 if __name__ == "__main__":
