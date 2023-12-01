@@ -1,17 +1,11 @@
 #
 FROM python:3.11.6
 
-#
-WORKDIR /code
 
-#
-COPY ./requirements.txt /code/requirements.txt
+WORKDIR /opt
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+# 
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5050"]
 
-#
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-
-#
-COPY ./app /code/app
-
-#
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]

@@ -7,7 +7,7 @@ from starlette import status
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.models import TaskModel
+from models import TaskModel
 
 router = APIRouter()
 
