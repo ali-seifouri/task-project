@@ -8,16 +8,21 @@ from fastapi.requests import Request
 from fastapi.responses import Response
 
 from app import tasks_router
+from app.config import get_settings
 
 task_collection = None
+
+settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global task_collection
-    client = MongoClient('mongodb://127.0.0.1:27017/usage?retryWrites=true&w=majority')
-    db = client['tasks']
-    task_collection = db['task']
+    client = MongoClient(settings.mongodb_url)
+    db = client[settings.mongo_database_name]
+    task_collection = db[settings.mongo_collection_name]
+    # if we want to add a custom id column with unique index we should add the line below (if we dont want to use the
+    # ObjectID as the main id in business)
     task_collection.create_index([("id", pymongo.ASCENDING)], unique=True)
     yield
 
